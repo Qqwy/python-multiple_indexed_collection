@@ -1,3 +1,53 @@
+
+# These names are skipped during __setattr__ wrapping; they do not cause the containers to be updated.
+_RESTRICTED_NAMES = [
+    '_multi_indexed_collections', '__setattr__',
+    '__dict__', '__class__'
+]
+class AutoUpdatingItem():
+    """When mixing in this class
+    all changes to properties on the object cause the `MultiIndexedCollection`s it is contained in
+    to automatically re-compute the keys of the object, so manually calling `collection.update(obj)` is no longer required.
+
+    This is implemented by wrapping `__setattr__` with a custom implementation that calls `collection.update(obj)` every time a property changes.
+
+    >>>
+    >>> class AutoUser(AutoUpdatingItem):
+    ...     def __init__(self, name, user_id):
+    ...         self.name = name
+    ...         self.user_id = user_id
+    >>> autojohn = AutoUser('John', 1)
+    >>> autopete = AutoUser('Pete', 2)
+    >>> autolara = AutoUser('Lara', 3)
+    >>>
+    >>>
+    >>> mic = MultiIndexedCollection({'user_id', 'name'})
+    >>> mic.add(autojohn)
+    >>> mic.add(autopete)
+    >>> len(mic)
+    2
+    >>> mic.find('name', 'John') == autojohn
+    True
+    >>> autojohn.name = 'Johnny'
+    >>> mic.get('name', 'Johnny', False) == autojohn
+    True
+    >>> mic.get('name', 'John', False)
+    False
+    """
+
+    def __new__(cls, *args, **kwargs):
+        inst = super(AutoUpdatingItem, cls).__new__(cls)
+        # Skips below implementation of __setattr__ here.
+        super(AutoUpdatingItem, inst).__setattr__('_multi_indexed_collections', [])
+        return inst
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        if name not in _RESTRICTED_NAMES:
+            for collection in self._multi_indexed_collections:
+                collection.update_item(self)
+
+
 class MultiIndexedCollection():
     """
     A collection type for arbitrary objects, that indexes them based on (a subset of) their properties.
@@ -10,16 +60,18 @@ class MultiIndexedCollection():
     Optionally, custom dictionary-types can be used, which is nice if you have some special requirements for your dictionary types.
 
 
+    >>> # Most example code uses the following class and data as example:
     >>> class User():
     ...     def __init__(self, name, user_id):
     ...         self.name = name
     ...         self.user_id = user_id
     >>>
-    >>> mic = MultiIndexedCollection({'user_id', 'name'})
     >>> john = User('John', 1)
     >>> pete = User('Pete', 2)
     >>> lara = User('Lara', 3)
     >>>
+    >>>
+    >>> mic = MultiIndexedCollection({'user_id', 'name'})
     >>> mic.add(john)
     >>> mic.add(pete)
     >>> len(mic)
@@ -32,9 +84,15 @@ class MultiIndexedCollection():
     Traceback (most recent call last):
         ...
     KeyError: '`name`=`NotInThere`'
+    >>> ('name', 'John') in mic
+    True
+    >>> ('user_id', 2) in mic
+    True
+    >>> ('user_id', 42) in mic
+    False
     """
 
-    def __init__(self, properties, dict_type=dict):
+    def __init__(self, properties, dict_type=dict, auto_update=False):
         """Initializes the MultiIndexedCollection with the given `properties`.
 
         properties -- a set (or iteratable sequence convertable to one) of string names of properties to index.
@@ -61,16 +119,40 @@ class MultiIndexedCollection():
         # Contains for all objects a dict of (property->value)s,
         # so we can keep track of the per-object tracked properties (and their values).
         self._propdict = self._dict_type()
+        self._auto_update = auto_update
 
     def add(self, obj):
         """
         Adds `obj` to the collection,
         so it can later be found under all its properties' values.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>> len(mic)
+        2
+        >>> mic.find('name', 'John') == john
+        True
         """
-        # TODO return error if object already in propdict?
-        prop_results = {prop: getattr(obj, prop) for prop in self._properties}
+        if obj in self._propdict:
+            return
+
+        if isinstance(obj, AutoUpdatingItem):
+            obj._multi_indexed_collections.append(self)
+
+        # if self._auto_update:
+        #     collection = self
+        #     orig_obj_setattr = obj.__setattr__
+        #     def setattr(self, name, value):
+        #         print("Inside setattr! {}={}", name, value)
+        #         orig_obj_setattr(name, value)
+        #         collection.update_item(obj)
+        #     obj.__class__.__setattr__ = setattr;
+
+        prop_results = {prop: getattr(obj, prop) for prop in self._properties if hasattr(obj, prop)}
         # TODO Check for duplicate keys before altering here.
-        for (prop, val) in prop_results.items():
+        for (prop, val) in prop_results.items() :
             self._dicts[prop][val] = obj
         self._propdict[obj] = prop_results
 
@@ -78,6 +160,19 @@ class MultiIndexedCollection():
         """Finds the object whose indexed property `prop` has value `value`.
 
         Returns `KeyError` if this cannot be found.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>> len(mic)
+        2
+        >>> mic.find('name', 'John') == john
+        True
+        >>> mic.find('name', 'NotInThere')
+        Traceback (most recent call last):
+            ...
+        KeyError: '`name`=`NotInThere`'
         """
         try:
             return self._dicts[prop][value]
@@ -91,16 +186,51 @@ class MultiIndexedCollection():
 
         Returns `KeyError` if this cannot be found.
         propval_tuple -- A tuple (pair) where `prop` is the first item and `value` the second.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>>
+        >>> mic['name', 'John'] == john
+        True
+        >>> mic['user_id', 2] == pete
+        True
+        >>> mic['name', 'NotInThere']
+        Traceback (most recent call last):
+            ...
+        KeyError: '`name`=`NotInThere`'
         """
         prop, val = propval_tuple
         return self.find(prop, val)
 
     def remove(self, obj):
         """Removes `obj` from this collection, so it will no longer be indexed or found.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>>
+        >>> mic['name', 'John'] == john
+        True
+        >>> mic['user_id', 2] == pete
+        True
+        >>> mic.remove(john)
+        >>>
+        >>> mic.get('name', 'John', False)
+        False
+        >>> mic.find('name', 'John')
+        Traceback (most recent call last):
+            ...
+        KeyError: '`name`=`John`'
         """
         if not obj in self._propdict:
             raise KeyError(obj)
-        # TODO return error if object not in propdict.
+
+        if isinstance(obj, AutoUpdatingItem):
+            obj._multi_indexed_collections.remove(self)
+
         prop_results = self._propdict[obj]
         for (prop, val) in prop_results.items():
             del self._dicts[prop][val]
@@ -108,6 +238,15 @@ class MultiIndexedCollection():
 
     def __len__(self):
         """The amount of items in the collection.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> len(mic)
+        0
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>> len(mic)
+        2
         """
         return len(self._propdict)
 
@@ -117,7 +256,18 @@ class MultiIndexedCollection():
     def __contains__(self, propval_tuple):
         """True if there exists an item under the key `value` for `prop`.
 
-        `propval_tuple` -- a tuple (pair) whose first item identifies the `prop` and the second item the `value` to look for."""
+        `propval_tuple` -- a tuple (pair) whose first item identifies the `prop` and the second item the `value` to look for.
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> len(mic)
+        0
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>> ('name', 'John') in mic
+        True
+        >>> ('user_id', 2) in mic
+        True
+        """
         prop, val = propval_tuple
         return val in self._dicts[prop]
 
@@ -126,14 +276,33 @@ class MultiIndexedCollection():
         Updates `obj`'s property values, so it will be indexed using its current values.
 
         Needs to be called manually every time `obj` was altered.
+
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>>
+        >>> mic['name', 'John'] == john
+        True
+        >>> john.name = 'Johnny'
+        >>> mic['name', 'John'] == john
+        True
+        >>> mic.update_item(john)
+        >>> mic['name', 'Johnny'] == john
+        True
+        >>> mic['name', 'John']
+        Traceback (most recent call last):
+            ...
+        KeyError: '`name`=`John`'
+
         """
-        prop_results = {(prop, getattr(obj, prop)) for prop in self._properties}
+        prop_results = {(prop, getattr(obj, prop)) for prop in self._properties if hasattr(obj, prop)}
         prev_prop_results = set(self._propdict[obj].items())
         for (prop, val) in (prev_prop_results - prop_results):
             del self._dicts[prop][val]
         for (prop, val) in (prop_results - prev_prop_results):
             self._dicts[prop][val] = obj
-        self._propdict[obj] = prop_results
+        self._propdict[obj] = self._dict_type(prop_results)
 
     def clear(self):
         """Completely empties the state of this MultiIndexedCollection"""
@@ -191,13 +360,9 @@ class MultiIndexedCollection():
         """Maybe somewhat surprisingly, iterates over all objects inside the MultiIndexedCollection"""
         return self._propdict.keys()
 
-    def __contains__(self, item):
-        """True if `item` is contained in this collection."""
-        return item in self._propdict
-
     def get(self, prop, value, d=None):
         """Attempts to retrieve the item whose `prop` is `value`, but returns `d` as default if it could not be found."""
-        return self._dicts[prop].get(value, d=default)
+        return self._dicts[prop].get(value, d)
 
 
     # TODO Per https://docs.python.org/3.6/reference/datamodel.html#emulating-container-types we should add(?):
@@ -208,6 +373,16 @@ class MultiIndexedCollection():
 
 if __name__ == "__main__":
     import doctest
+    # doctest example data
+    class User():
+        def __init__(self, name, user_id):
+            self.name = name
+            self.user_id = user_id
+
+    john = User('John', 1)
+    pete = User('Pete', 2)
+    lara = User('Lara', 3)
+    # End example data.
     doctest.testmod()
 
     # class User():
@@ -233,3 +408,4 @@ if __name__ == "__main__":
     # mic.remove(john)
     # # mic.remove(john)
     # # print(mic['name', 'John'])
+
