@@ -141,15 +141,6 @@ class MultiIndexedCollection():
         if isinstance(obj, AutoUpdatingItem):
             obj._multi_indexed_collections.append(self)
 
-        # if self._auto_update:
-        #     collection = self
-        #     orig_obj_setattr = obj.__setattr__
-        #     def setattr(self, name, value):
-        #         print("Inside setattr! {}={}", name, value)
-        #         orig_obj_setattr(name, value)
-        #         collection.update_item(obj)
-        #     obj.__class__.__setattr__ = setattr;
-
         prop_results = {prop: getattr(obj, prop) for prop in self._properties if hasattr(obj, prop)}
         # TODO Check for duplicate keys before altering here.
         for (prop, val) in prop_results.items() :
