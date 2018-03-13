@@ -4,5 +4,8 @@ python:
   - "3.5"
   - "3.6"
 
+install:
+  - pip install pipenv;
+  - pipenv install --test;
 script:
-  - pytest
+  - pipenv run pytest
