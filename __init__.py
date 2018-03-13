@@ -198,6 +198,8 @@ class MultiIndexedCollection():
     def remove(self, obj):
         """Removes `obj` from this collection, so it will no longer be indexed or found.
 
+        Raises `KeyError` if `obj` is not contained in the collection.
+
 
         >>> mic = MultiIndexedCollection({'user_id', 'name'})
         >>> mic.add(john)
@@ -226,6 +228,13 @@ class MultiIndexedCollection():
         for (prop, val) in prop_results.items():
             del self._dicts[prop][val]
         del self._propdict[obj]
+
+    def discard(self, obj):
+        """Removes `obj` from this collection, if it is present."""
+        try:
+            self.remove(obj)
+        except KeyError:
+            pass
 
     def __len__(self):
         """The amount of items in the collection.
@@ -364,7 +373,7 @@ class MultiIndexedCollection():
 
 if __name__ == "__main__":
     import doctest
-    # doctest example data
+    # doctest example data:
     class User():
         def __init__(self, name, user_id):
             self.name = name
@@ -375,28 +384,3 @@ if __name__ == "__main__":
     lara = User('Lara', 3)
     # End example data.
     doctest.testmod()
-
-    # class User():
-    #     def __init__(self, uid, name):
-    #         self.uid = uid
-    #         self.name = name
-
-    # mic = MultiIndexedCollection({'uid', 'name'})
-    # qqwy = User(1, 'Qqwy')
-    # pete = User(2, 'Pete')
-    # john = User(3, 'John')
-    # mic.add(qqwy)
-    # mic.add(pete)
-    # mic.add(john)
-
-    # print(mic._propdict)
-    # print(mic._dicts)
-
-    # print(mic['uid', 1])
-    # print(mic['uid', 2])
-    # print(mic['name', 'Qqwy'])
-
-    # mic.remove(john)
-    # # mic.remove(john)
-    # # print(mic['name', 'John'])
-
