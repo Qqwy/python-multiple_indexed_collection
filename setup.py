@@ -25,8 +25,6 @@ setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
 
-        'Programming Language :: Python 3',
-        'Locense :: OSI Approved :: MIT Liccense',
     ],
     python_requires='>=3',
 )
