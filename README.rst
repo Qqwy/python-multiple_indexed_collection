@@ -1,9 +1,5 @@
 # Multi Indexed Collection
 
-[![Build Status](https://travis-ci.org/Qqwy/python-multiple_indexed_collection.svg?branch=master)](https://travis-ci.org/Qqwy/python-multiple_indexed_collection)
-
-[PyPi](https://pypi.python.org/pypi/multi-indexed-collection/1.0.0)
-
 A collection type for arbitrary objects, that indexes them based on (a subset of) their properties.
 Which properties to look for is specified during the initialization of the MultiIndexedCollection;
 any hashable objects can be stored inside.

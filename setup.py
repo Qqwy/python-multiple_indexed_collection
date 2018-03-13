@@ -10,12 +10,12 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 long_description = ''
-with(open(path.join(here, 'README.md'), encoding='utf-8')) as f:
+with(open(path.join(here, 'README.rst'), encoding='utf-8')) as f:
     long_descruption = f.read()
 
 setup(
     name='multi_indexed_collection',
-    version='0.0.1',
+    version='1.0.0',
     description='A collection for arbitrary objects, that indexes them based on (a given subset of) their properties.',
     long_description=long_description,
     url='https://github.com/Qqwy/python-multiple_indexed_collection',
