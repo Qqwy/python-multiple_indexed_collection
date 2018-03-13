@@ -1,9 +1,17 @@
-class MultiIndexedDict():
+class MultiIndexedCollection():
     """
+    A collection type for arbitrary objects, that indexes them based on (a subset of) their properties.
+    Which properties to look for is specified during the initialization of the MultiIndexedCollection;
+    any hashable objects can be stored inside.
+
+    removing/updating objects is also supported.
+    The MultiIndexedCollection will _not_ automatically know when an object is changed, so calling `update` manually is necessary in that case.
+
+    Optionally, custom dictionary-types can be used, which is nice if you have some special requirements for your dictionary types.
     """
 
     def __init__(self, properties, dict_type=dict):
-        """Initializes the MultiIndexedDict with the given `properties`.
+        """Initializes the MultiIndexedCollection with the given `properties`.
 
         properties -- a set (or iteratable sequence convertable to one) of string names of properties to index.
         dict_type -- Optional; type to use under the hood to store objects in.
@@ -104,12 +112,12 @@ class MultiIndexedDict():
         self._propdict[obj] = prop_results
 
     def clear(self):
-        """Completely empties the state of this MultiIndexedDict"""
+        """Completely empties the state of this MultiIndexedCollection"""
         self._dicts = self._dict_type([(prop, self._dict_type()) for prop in properties])
         self._propdict = self._dict_type()
 
     def copy(self):
-        """Creates a shallow copy of this MultiIndexedDict.
+        """Creates a shallow copy of this MultiIndexedCollection.
 
         (The items contained are not copied but instead referenced)"""
         other = self.__class__(self._properties, dict_type=self._dict_type)
@@ -146,11 +154,11 @@ class MultiIndexedDict():
         return self._propdict.items()
 
     def properties(self):
-        """Returns the property names that this MultipleIndexedDict was initialized with."""
+        """Returns the property names that this MultiIndexedCollection was initialized with."""
         return self._properties
 
     def __iter__(self):
-        """Maybe somewhat surprisingly, iterates over all objects inside the MultiIndexedDict"""
+        """Maybe somewhat surprisingly, iterates over all objects inside the MultiIndexedCollection"""
         return self._propdict.keys()
 
     def __contains__(self, item):
@@ -174,21 +182,21 @@ if __name__ == "__main__":
             self.uid = uid
             self.name = name
 
-    mid = MultiIndexedDict({'uid', 'name'})
+    mic = MultiIndexedCollection({'uid', 'name'})
     qqwy = User(1, 'Qqwy')
     pete = User(2, 'Pete')
     john = User(3, 'John')
-    mid.add(qqwy)
-    mid.add(pete)
-    mid.add(john)
+    mic.add(qqwy)
+    mic.add(pete)
+    mic.add(john)
 
-    print(mid._propdict)
-    print(mid._dicts)
+    print(mic._propdict)
+    print(mic._dicts)
 
-    print(mid['uid', 1])
-    print(mid['uid', 2])
-    print(mid['name', 'Qqwy'])
+    print(mic['uid', 1])
+    print(mic['uid', 2])
+    print(mic['name', 'Qqwy'])
 
-    mid.remove(john)
-    # mid.remove(john)
-    # print(mid['name', 'John'])
+    mic.remove(john)
+    # mic.remove(john)
+    # print(mic['name', 'John'])

@@ -1,4 +1,4 @@
-"""A collection that works like a set/dictionary,
+"""A collection for arbitrary objects, that indexes them based on (a given subset of) their properties.
 
 but keeps track of the given props values, so you can use multiple different kinds of indexing to find an object again at a later time.
 """
@@ -9,13 +9,14 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
+long_description = ''
 with(open(path.join(here, 'README.md'), encoding='utf-8')) as f:
     long_descruption = f.read()
 
 setup(
-    name='multi_indexed_dict',
+    name='multi_indexed_collection',
     version='0.0.1',
-    description='Multiple Indexed Dictionary',
+    description='A collection for arbitrary objects, that indexes them based on (a given subset of) their properties.',
     long_description=long_description,
     # url='https://github.com/Qqwy/TODO',
     author='Qqwy/Wiebe-Marten Wijnja',
