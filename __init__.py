@@ -8,6 +8,30 @@ class MultiIndexedCollection():
     The MultiIndexedCollection will _not_ automatically know when an object is changed, so calling `update` manually is necessary in that case.
 
     Optionally, custom dictionary-types can be used, which is nice if you have some special requirements for your dictionary types.
+
+
+    >>> class User():
+    ...     def __init__(self, name, user_id):
+    ...         self.name = name
+    ...         self.user_id = user_id
+    >>>
+    >>> mic = MultiIndexedCollection({'user_id', 'name'})
+    >>> john = User('John', 1)
+    >>> pete = User('Pete', 2)
+    >>> lara = User('Lara', 3)
+    >>>
+    >>> mic.add(john)
+    >>> mic.add(pete)
+    >>> len(mic)
+    2
+    >>> mic.find('name', 'John') == john
+    True
+    >>> mic['name', 'Pete'] == pete
+    True
+    >>> mic['name', 'NotInThere']
+    Traceback (most recent call last):
+        ...
+    KeyError: '`name`=`NotInThere`'
     """
 
     def __init__(self, properties, dict_type=dict):
@@ -116,13 +140,19 @@ class MultiIndexedCollection():
         self._dicts = self._dict_type([(prop, self._dict_type()) for prop in properties])
         self._propdict = self._dict_type()
 
-    def copy(self):
+    def __copy__(self):
         """Creates a shallow copy of this MultiIndexedCollection.
 
         (The items contained are not copied but instead referenced)"""
         other = self.__class__(self._properties, dict_type=self._dict_type)
         other._propdict = self._propdict.copy()
         other._dicts = self.dicts.copy()
+
+    def copy(self):
+        """Creates a shallow copy of this MultiIndexedCollection.
+
+        (The items contained are not copied but instead referenced)"""
+        self.__copy__()
 
     def values(self, prop=None):
         """
@@ -177,26 +207,29 @@ class MultiIndexedCollection():
 
 
 if __name__ == "__main__":
-    class User():
-        def __init__(self, uid, name):
-            self.uid = uid
-            self.name = name
+    import doctest
+    doctest.testmod()
 
-    mic = MultiIndexedCollection({'uid', 'name'})
-    qqwy = User(1, 'Qqwy')
-    pete = User(2, 'Pete')
-    john = User(3, 'John')
-    mic.add(qqwy)
-    mic.add(pete)
-    mic.add(john)
+    # class User():
+    #     def __init__(self, uid, name):
+    #         self.uid = uid
+    #         self.name = name
 
-    print(mic._propdict)
-    print(mic._dicts)
+    # mic = MultiIndexedCollection({'uid', 'name'})
+    # qqwy = User(1, 'Qqwy')
+    # pete = User(2, 'Pete')
+    # john = User(3, 'John')
+    # mic.add(qqwy)
+    # mic.add(pete)
+    # mic.add(john)
 
-    print(mic['uid', 1])
-    print(mic['uid', 2])
-    print(mic['name', 'Qqwy'])
+    # print(mic._propdict)
+    # print(mic._dicts)
 
-    mic.remove(john)
+    # print(mic['uid', 1])
+    # print(mic['uid', 2])
+    # print(mic['name', 'Qqwy'])
+
     # mic.remove(john)
-    # print(mic['name', 'John'])
+    # # mic.remove(john)
+    # # print(mic['name', 'John'])
