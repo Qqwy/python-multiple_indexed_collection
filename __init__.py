@@ -371,16 +371,8 @@ class MultiIndexedCollection():
     # -update
 
 
-if __name__ == "__main__":
-    import doctest
-    # doctest example data:
-    class User():
-        def __init__(self, name, user_id):
-            self.name = name
-            self.user_id = user_id
 
-    john = User('John', 1)
-    pete = User('Pete', 2)
-    lara = User('Lara', 3)
-    # End example data.
-    doctest.testmod()
+# if __name__ == "__main__":
+#     run_doctests({})
+#     # End example data.
+#     doctest.testmod()
