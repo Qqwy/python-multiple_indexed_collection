@@ -18,7 +18,7 @@ setup(
     version='0.0.1',
     description='A collection for arbitrary objects, that indexes them based on (a given subset of) their properties.',
     long_description=long_description,
-    # url='https://github.com/Qqwy/TODO',
+    url='https://github.com/Qqwy/python-multiple_indexed_collection',
     author='Qqwy/Wiebe-Marten Wijnja',
     author_email='qqwy@gmx.com',
     classifiers=[
@@ -28,4 +28,5 @@ setup(
         'Programming Language :: Python 3',
         'Locense :: OSI Approved :: MIT Liccense',
     ],
+    python_requires='>=3',
 )
