@@ -144,6 +144,10 @@ class MultiIndexedCollection():
         prop_results = {prop: getattr(obj, prop) for prop in self._properties if hasattr(obj, prop)}
         # TODO Check for duplicate keys before altering here.
         for (prop, val) in prop_results.items() :
+            if val in self._dicts[prop].keys():
+                raise KeyError("Collection already contains an element with `{}`=`{}`".format(prop, val))
+
+        for (prop, val) in prop_results.items() :
             self._dicts[prop][val] = obj
         self._propdict[obj] = prop_results
 
@@ -302,11 +306,13 @@ class MultiIndexedCollection():
             del self._dicts[prop][val]
         for (prop, val) in (prop_results - prev_prop_results):
             self._dicts[prop][val] = obj
-        self._propdict[obj] = self._dict_type(prop_results)
+        # Extra indirection is necessary because not all dict types can create
+        # a dict directly from a set of pairs.
+        self._propdict[obj] = self._dict_type(dict(prop_results))
 
     def clear(self):
         """Completely empties the state of this MultiIndexedCollection"""
-        self._dicts = self._dict_type([(prop, self._dict_type()) for prop in properties])
+        self._dicts = self._dict_type({prop: self._dict_type() for prop in self._properties})
         self._propdict = self._dict_type()
 
     def __copy__(self):
