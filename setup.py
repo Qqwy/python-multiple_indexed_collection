@@ -16,7 +16,7 @@ with(open(path.join(here, 'README.md'), encoding='utf-8')) as f:
 setup(
     name='multi_indexed_collection',
     py_modules=['multi_indexed_collection'],
-    version='1.0.5',
+    version='1.1.0',
     description='A collection for arbitrary objects, that indexes them based on (a given subset of) their properties.',
     long_description=long_description,
     url='https://github.com/Qqwy/python-multiple_indexed_collection',
