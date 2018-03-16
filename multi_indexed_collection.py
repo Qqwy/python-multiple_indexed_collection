@@ -280,6 +280,8 @@ class MultiIndexedCollection():
         Updates `obj`'s property values, so it will be indexed using its current values.
 
         Needs to be called manually every time `obj` was altered.
+        Alternatively, objects who inherit from `AutoUpdatingItem` will automatically call this function
+        for each MultiIndexedCollection they are part of whenever one of their properties changes.
 
 
         >>> mic = MultiIndexedCollection({'user_id', 'name'})
@@ -302,12 +304,24 @@ class MultiIndexedCollection():
         """
         prop_results = {(prop, getattr(obj, prop)) for prop in self._properties if hasattr(obj, prop)}
         prev_prop_results = set(self._propdict[obj].items())
-        for (prop, val) in (prev_prop_results - prop_results):
+        old_props = (prev_prop_results - prop_results)
+        new_props = (prop_results - prev_prop_results)
+
+        # Ensure no duplicate new keys.
+        for (prop, val) in new_props :
+            if val in self._dicts[prop].keys():
+                raise KeyError("Collection already contains an element with `{}`=`{}`".format(prop, val))
+
+        # Remove old/deleted properties.
+        for (prop, val) in old_props:
             del self._dicts[prop][val]
-        for (prop, val) in (prop_results - prev_prop_results):
+
+        # insert updated properties
+        for (prop, val) in new_props:
             self._dicts[prop][val] = obj
+
         # Extra indirection is necessary because not all dict types can create
-        # a dict directly from a set of pairs.
+        # a dict directly from a set of pairs:
         self._propdict[obj] = self._dict_type(dict(prop_results))
 
     def clear(self):
