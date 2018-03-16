@@ -134,6 +134,19 @@ class MultiIndexedCollection():
         2
         >>> mic.find('name', 'John') == john
         True
+
+
+        Attempting to add an object that has a property value that conflicts with a property already in the collection, raises a DuplicateIndexError:
+
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> mic.add(pete)
+        >>> anotherpete = User('Pete', 22)
+        >>> mic.add(anotherpete)
+        Traceback (most recent call last):
+           ...
+        multi_indexed_collection.DuplicateIndexError: 'Collection already contains an element with `name`=`Pete`'
+
         """
         if obj in self._propdict:
             return
@@ -145,7 +158,7 @@ class MultiIndexedCollection():
         # TODO Check for duplicate keys before altering here.
         for (prop, val) in prop_results.items() :
             if val in self._dicts[prop].keys():
-                raise KeyError("Collection already contains an element with `{}`=`{}`".format(prop, val))
+                raise DuplicateIndexError("Collection already contains an element with `{}`=`{}`".format(prop, val))
 
         for (prop, val) in prop_results.items() :
             self._dicts[prop][val] = obj
@@ -301,6 +314,21 @@ class MultiIndexedCollection():
             ...
         KeyError: '`name`=`John`'
 
+
+        Updating to a key under which another value is already stored results in a DuplicateIndexError (which is a subclass of KeyError):
+
+
+
+        >>> john.name = 'John'
+        >>> mic = MultiIndexedCollection({'user_id', 'name'})
+        >>> mic.add(john)
+        >>> johnny = User('Johnny', 4)
+        >>> mic.add(johnny)
+        >>> johnny.name = 'John'
+        >>> mic.update_item(johnny)
+        Traceback (most recent call last):
+            ...
+        multi_indexed_collection.DuplicateIndexError: 'Collection already contains an element with `name`=`John`'
         """
         prop_results = {(prop, getattr(obj, prop)) for prop in self._properties if hasattr(obj, prop)}
         prev_prop_results = set(self._propdict[obj].items())
@@ -308,9 +336,12 @@ class MultiIndexedCollection():
         new_props = (prop_results - prev_prop_results)
 
         # Ensure no duplicate new keys.
-        for (prop, val) in new_props :
-            if val in self._dicts[prop].keys():
-                raise KeyError("Collection already contains an element with `{}`=`{}`".format(prop, val))
+        for (prop, val) in new_props:
+            if val in self._dicts[prop].keys() and self._dicts[prop][val] != obj:
+                raise DuplicateIndexError("Collection already contains an element with `{}`=`{}`".format(prop, val))
+
+        # print("old_props: {}".format(old_props))
+        # print("new_props: {}".format(new_props))
 
         # Remove old/deleted properties.
         for (prop, val) in old_props:
@@ -343,30 +374,30 @@ class MultiIndexedCollection():
         (The items contained are not copied but instead referenced)"""
         self.__copy__()
 
-    def values(self, prop=None):
+    def values(self, property_name=None):
         """
         When the optional `prop` arguments is not given, it will return all contained objects.
 
         Otherwise, it will only return objects that have the property `prop`.
         """
-        if prop:
-            return self._dicts[prop].keys()
+        if property_name:
+            return self._dicts[property_name].keys()
         else:
             return self._propdict.keys()
 
-    def items(self, prop):
+    def items(self, property_name):
         """Returns an iterator of all items stored in this collection"""
-        return self._dicts[prop].items()
+        return self._dicts[property_name].items()
 
-    def keys(self, prop=None):
+    def keys(self, property_name=None):
         """Returns an iterator of all values of the given property.
 
         When the optional `prop` is not given, it will return an iterator of all property names.
         """
-        if prop:
+        if property_name:
             return self._propdict.keys()
         else:
-            return self._dicts[prop].keys()
+            return self._dicts[property_name].keys()
 
     def items_props(self):
         """An iterator of all contained items as tuples, where the key is the item, and the value is a dictionary of (property names->property values)"""
@@ -380,19 +411,10 @@ class MultiIndexedCollection():
         """Maybe somewhat surprisingly, iterates over all objects inside the MultiIndexedCollection"""
         return self._propdict.keys()
 
-    def get(self, prop, value, d=None):
-        """Attempts to retrieve the item whose `prop` is `value`, but returns `d` as default if it could not be found."""
-        return self._dicts[prop].get(value, d)
+    def get(self, property_name, value, default=None):
+        """Attempts to retrieve the item whose `prop` is `value`, but returns `default` as default if it could not be found."""
+        return self._dicts[property_name].get(value, default)
 
-
-    # TODO Per https://docs.python.org/3.6/reference/datamodel.html#emulating-container-types we should add(?):
-    # -pop
-    # -popitem
-    # -update
-
-
-
-# if __name__ == "__main__":
-#     run_doctests({})
-#     # End example data.
-#     doctest.testmod()
+class DuplicateIndexError(KeyError):
+    """Raised whenever an item is added or updated a MultiIndexedCollection that would result in a pre-contained item to become inaccessible because one (or more) of its properties already occupies the value that the new item would store."""
+    pass
