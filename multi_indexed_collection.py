@@ -381,7 +381,7 @@ class MultiIndexedCollection():
         Otherwise, it will only return objects that have the property `prop`.
         """
         if property_name:
-            return self._dicts[property_name].keys()
+            return self._dicts[property_name].values()
         else:
             return self._propdict.keys()
 
@@ -395,9 +395,9 @@ class MultiIndexedCollection():
         When the optional `prop` is not given, it will return an iterator of all property names.
         """
         if property_name:
-            return self._propdict.keys()
-        else:
             return self._dicts[property_name].keys()
+        else:
+            return self._propdict.values()
 
     def items_props(self):
         """An iterator of all contained items as tuples, where the key is the item, and the value is a dictionary of (property names->property values)"""
